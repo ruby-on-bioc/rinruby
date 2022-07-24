@@ -173,7 +173,7 @@ class RinRuby
     end
     raise EngineClosed if (@reader.closed? || @writer.closed?)
     
-    @writer.puts <<-EOF
+    @writer.puts <<~EOF
       assign("#{RinRuby_Env}", new.env(), envir = globalenv())
     EOF
     @socket = nil
@@ -520,7 +520,7 @@ class RinRuby
   #:startdoc:
 
   def r_rinruby_socket_io
-    @writer.print <<-EOF
+    @writer.print <<~EOF
       #{RinRuby_Socket} <- NULL
       #{RinRuby_Env}$session <- function(f){
         invisible(f(#{RinRuby_Socket}))
@@ -546,116 +546,116 @@ class RinRuby
   end
   
   def r_rinruby_check
-    @writer.print <<-EOF
-    #{RinRuby_Env}$parseable <- function(var) {
-      src <- srcfilecopy("<text>", lines=var, isFile=F)
-      parsed <- try(parse(text=var, srcfile=src, keep.source=T), silent=TRUE)
-      res <- function(){eval(parsed, env=globalenv())} # return evaluating function
-      notification <- if(inherits(parsed, "try-error")){
-        attributes(res)$parse.data <- getParseData(src)
-        0L
-      }else{
-        1L
+    @writer.print <<~EOF
+      #{RinRuby_Env}$parseable <- function(var) {
+        src <- srcfilecopy("<text>", lines=var, isFile=F)
+        parsed <- try(parse(text=var, srcfile=src, keep.source=T), silent=TRUE)
+        res <- function(){eval(parsed, env=globalenv())} # return evaluating function
+        notification <- if(inherits(parsed, "try-error")){
+          attributes(res)$parse.data <- getParseData(src)
+          0L
+        }else{
+          1L
+        }
+        #{RinRuby_Env}$session.write(function(write){
+          write(notification)
+        })
+        invisible(res)
       }
-      #{RinRuby_Env}$session.write(function(write){
-        write(notification)
-      })
-      invisible(res)
-    }
-    #{RinRuby_Env}$last.parse.data <- function(data) {
-      if(nrow(data) == 0L){
-        c(0L, 0L, 0L)
-      }else{
-        endline <- data[max(data$line2) == data$line2, ]
-        last.item <- endline[max(endline$col2) == endline$col2, ]
-        eval(substitute(c(line2, col2, token == "';'"), last.item)) 
+      #{RinRuby_Env}$last.parse.data <- function(data) {
+        if(nrow(data) == 0L){
+          c(0L, 0L, 0L)
+        }else{
+          endline <- data[max(data$line2) == data$line2, ]
+          last.item <- endline[max(endline$col2) == endline$col2, ]
+          eval(substitute(c(line2, col2, token == "';'"), last.item)) 
+        }
       }
-    }
-    #{RinRuby_Env}$assignable <- function(var) {
-      parsed <- try(parse(text=paste0(var, ' <- .value')), silent=TRUE)
-      is_invalid <- inherits(parsed, "try-error") || (length(parsed) != 1L)
-      #{RinRuby_Env}$session.write(function(write){
-        write(ifelse(is_invalid, 0L, 1L))
-      })
-      invisible(#{RinRuby_Env}$assign(var)) # return assigning function
-    }
+      #{RinRuby_Env}$assignable <- function(var) {
+        parsed <- try(parse(text=paste0(var, ' <- .value')), silent=TRUE)
+        is_invalid <- inherits(parsed, "try-error") || (length(parsed) != 1L)
+        #{RinRuby_Env}$session.write(function(write){
+          write(ifelse(is_invalid, 0L, 1L))
+        })
+        invisible(#{RinRuby_Env}$assign(var)) # return assigning function
+      }
     EOF
   end
   # Create function on ruby to get values
   def r_rinruby_assign
-    @writer.print <<-EOF
-    #{RinRuby_Env}$assign <- function(var) {
-      expr <- parse(text=paste0(var, " <- #{RinRuby_Env}$.value"))
-      invisible(function(.value){
-        #{RinRuby_Env}$.value <- .value
-        eval(expr, envir=globalenv())
-      })
-    }
-    #{RinRuby_Env}$assign.test.string <-
-        #{RinRuby_Env}$assign("#{RinRuby_Test_String}")
-    #{RinRuby_Env}$get_value <- function() {
-      #{RinRuby_Env}$session.read(function(read, readchar){
-        value <- NULL
-        type <- read(integer, 1)
-        length <- read(integer, 1)
-        na.indices <- function(){
-          read(integer, read(integer, 1)) + 1L
-        }
-        if ( type == #{RinRuby_Type_Logical} ) {
-          value <- read(logical, length)
-        } else if ( type == #{RinRuby_Type_Integer} ) {
-          value <- read(integer, length)
-        } else if ( type == #{RinRuby_Type_Double} ) {
-          value <- read(double, length)
-          value[na.indices()] <- NA
-        } else if ( type == #{RinRuby_Type_Character} ) {
-          value <- character(length)
-          for(i in seq_len(length)){
-            nbytes <- read(integer, 1)
-            value[[i]] <- ifelse(nbytes >= 0, readchar(nbytes), NA)
+    @writer.print <<~EOF
+      #{RinRuby_Env}$assign <- function(var) {
+        expr <- parse(text=paste0(var, " <- #{RinRuby_Env}$.value"))
+        invisible(function(.value){
+          #{RinRuby_Env}$.value <- .value
+          eval(expr, envir=globalenv())
+        })
+      }
+      #{RinRuby_Env}$assign.test.string <-
+          #{RinRuby_Env}$assign("#{RinRuby_Test_String}")
+      #{RinRuby_Env}$get_value <- function() {
+        #{RinRuby_Env}$session.read(function(read, readchar){
+          value <- NULL
+          type <- read(integer, 1)
+          length <- read(integer, 1)
+          na.indices <- function(){
+            read(integer, read(integer, 1)) + 1L
           }
-        }
-        value
-      })
-    }
+          if ( type == #{RinRuby_Type_Logical} ) {
+            value <- read(logical, length)
+          } else if ( type == #{RinRuby_Type_Integer} ) {
+            value <- read(integer, length)
+          } else if ( type == #{RinRuby_Type_Double} ) {
+            value <- read(double, length)
+            value[na.indices()] <- NA
+          } else if ( type == #{RinRuby_Type_Character} ) {
+            value <- character(length)
+            for(i in seq_len(length)){
+              nbytes <- read(integer, 1)
+              value[[i]] <- ifelse(nbytes >= 0, readchar(nbytes), NA)
+            }
+          }
+          value
+        })
+      }
     EOF
   end
 
   def r_rinruby_pull
-    @writer.print <<-EOF
-#{RinRuby_Env}$pull <- function(var){
-  #{RinRuby_Env}$session.write(function(write){
-    if ( inherits(var ,"try-error") ) {
-      write(#{RinRuby_Type_NotFound}L)
-    } else {
-      na.indices <- function(){
-        indices <- which(is.na(var) & (!is.nan(var))) - 1L
-        write(length(indices), indices)
-      }
-      if (is.matrix(var)) {
-        write(#{RinRuby_Type_Matrix}L, nrow(var), ncol(var))
-      } else if ( is.logical(var) ) {
-        write(#{RinRuby_Type_Logical}L, length(var), as.integer(var))
-      } else if ( is.integer(var) ) {
-        write(#{RinRuby_Type_Integer}L, length(var), var)
-      } else if ( is.double(var) ) {
-        write(#{RinRuby_Type_Double}L, length(var), var)
-        na.indices()
-      } else if ( is.character(var) ) {
-        write(#{RinRuby_Type_Character}L, length(var))
-        for(i in var){
-          if( is.na(i) ){
-            write(as.integer(NA))
-          }else{
-            write(nchar(i, type="bytes"), i)
+    @writer.print <<~EOF
+      #{RinRuby_Env}$pull <- function(var){
+        #{RinRuby_Env}$session.write(function(write){
+          if ( inherits(var ,"try-error") ) {
+            write(#{RinRuby_Type_NotFound}L)
+          } else {
+            na.indices <- function(){
+              indices <- which(is.na(var) & (!is.nan(var))) - 1L
+              write(length(indices), indices)
+            }
+            if (is.matrix(var)) {
+              write(#{RinRuby_Type_Matrix}L, nrow(var), ncol(var))
+            } else if ( is.logical(var) ) {
+              write(#{RinRuby_Type_Logical}L, length(var), as.integer(var))
+            } else if ( is.integer(var) ) {
+              write(#{RinRuby_Type_Integer}L, length(var), var)
+            } else if ( is.double(var) ) {
+              write(#{RinRuby_Type_Double}L, length(var), var)
+              na.indices()
+            } else if ( is.character(var) ) {
+              write(#{RinRuby_Type_Character}L, length(var))
+              for(i in var){
+                if( is.na(i) ){
+                  write(as.integer(NA))
+                }else{
+                  write(nchar(i, type="bytes"), i)
+                }
+              }
+            } else {
+              write(#{RinRuby_Type_Unknown}L)
+            }
           }
-        }
-      } else {
-        write(#{RinRuby_Type_Unknown}L)
+        })
       }
-    }
-  })
-}
     EOF
   end
   
@@ -664,7 +664,7 @@ class RinRuby
     # TODO check still available connection?
     unless socket then
       t = Thread::new{socket = @server_socket.accept}
-      @writer.print <<-EOF
+      @writer.print <<~EOF
         #{RinRuby_Socket} <- socketConnection( \
             "#{@hostname}", #{@port_number}, blocking=TRUE, open="rb")
       EOF
@@ -685,7 +685,7 @@ class RinRuby
         @socket = socket
       else
         @socket = nil
-        @writer.print <<-EOF
+        @writer.print <<~EOF
           close(#{RinRuby_Socket}); \
           #{RinRuby_Socket} <- NULL
         EOF
