@@ -2,7 +2,7 @@
 require_relative 'lib/rinruby/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "rinruby"
+  spec.name          = "rinruby-edge"
   spec.version       = RinRuby::VERSION
   spec.authors       = ["David Dahl", "Scott Crawford", "Claudio Bustos"]
   spec.email         = ["rinruby@ddahl.org", "scott@ddahl.org", "clbustos@gmail.com"]
@@ -19,5 +19,4 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "rake"
   spec.add_development_dependency "rspec", ">= 3.0"
   spec.add_development_dependency "simplecov"
-
 end
