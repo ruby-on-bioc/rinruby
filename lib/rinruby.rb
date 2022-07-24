@@ -1,16 +1,16 @@
-#=RinRuby: Accessing the R[http://www.r-project.org] interpreter from pure Ruby
+  #=RinRuby: Accessing the R[http://www.r-project.org] interpreter from pure Ruby
 #
 # RinRuby is a Ruby library that integrates the R interpreter in Ruby, making R's
 # statistical routines and graphics available within Ruby.  The library consists
 # of a single Ruby script that is simple to install and does not require any
 # special compilation or installation of R.  Since the library is 100% pure Ruby,
 # it works on a variety of operating systems, Ruby implementations, and versions
-# of R.  RinRuby's methods are simple, making for readable code.  
+# of R.  RinRuby's methods are simple, making for readable code.
 # The {website [rinruby.ddahl.org]}[http://rinruby.ddahl.org] describes RinRuby
 # usage, provides comprehensive documentation, gives several examples, and discusses
 # RinRuby's implementation.
 #
-# Below is a simple example of RinRuby usage for simple linear regression. 
+# Below is a simple example of RinRuby usage for simple linear regression.
 # The simulation parameters are defined in Ruby, computations are performed in R,
 # and Ruby reports the results. In a more elaborate application, the simulation
 # parameter might come from input from a graphical user interface, the statistical
@@ -71,25 +71,18 @@ require 'matrix'
 require_relative 'rinruby/version'
 
 class RinRuby
-
   require 'socket'
 
   # Exception for closed engine
-  EngineClosed=Class.new(RuntimeError)
+  EngineClosed = Class.new(RuntimeError)
   # Parse error
-  ParseError=Class.new(RuntimeError)
+  ParseError = Class.new(RuntimeError)
 
-  RinRuby_Env = ".RinRuby"
-  RinRuby_Endian = ([1].pack("L").unpack("C*")[0] == 1) ? (:little) : (:big)
+  RinRuby_Env = '.RinRuby'
+  RinRuby_Endian = [1].pack('L').unpack1('C*') == 1 ? :little : :big
 
-  attr_reader :interactive
-  attr_reader :readline
-  attr_reader :echo_enabled
-  attr_reader :executable
-  attr_reader :port_number
-  attr_reader :port_width
-  attr_reader :hostname
-      
+  attr_reader :interactive, :readline, :echo_enabled, :executable, :port_number, :port_width, :hostname
+
   # RinRuby is invoked within a Ruby script
   # (or the interactive "irb" prompt denoted >>) using:
   #
@@ -119,75 +112,73 @@ class RinRuby
   #      >> R = RinRuby.new(false)
 
   def initialize(*args)
-    @opts = {:echo=>true, :interactive=>true, :executable=>nil, 
-        :port_number=>38442, :port_width=>1000, :hostname=>'127.0.0.1', :persistent => true}        
-    if args.size==1 and args[0].is_a? Hash
+    @opts = { echo: true, interactive: true, executable: nil,
+              port_number: 38_442, port_width: 1000, hostname: '127.0.0.1', persistent: true }
+    if args.size == 1 and args[0].is_a? Hash
       @opts.merge!(args[0])
     else
-      [:echo, :interactive, :executable, :port_number, :port_width].zip(args).each{|k, v|
-        @opts[k] = ((v == nil) ? @opts[k] : v)
-      }
+      %i[echo interactive executable port_number port_width].zip(args).each do |k, v|
+        @opts[k] = (v.nil? ? @opts[k] : v)
+      end
     end
-    [:port_width, :executable, :hostname, :interactive, [:echo, :echo_enabled]].each{|k_src, k_dst|
-      Kernel.eval("@#{k_dst || k_src} = @opts[:#{k_src}]", binding)
-    }
+    [:port_width, :executable, :hostname, :interactive, %i[echo echo_enabled]].each do |k_src, k_dst|
+      Kernel.eval("@#{k_dst || k_src} = @opts[:#{k_src}]", binding, __FILE__, __LINE__)
+    end
     @echo_stderr = false
 
-    raise Errno::EADDRINUSE unless (@port_number = 
-        (@opts[:port_number]...(@opts[:port_number] + @opts[:port_width])).to_a.shuffle.find{|i|
-      begin
-        @server_socket = TCPServer::new(@hostname, i)
-      rescue Errno::EADDRINUSE
-        false
-      end
-    })
-    
+    raise Errno::EADDRINUSE unless (@port_number =
+                                      (@opts[:port_number]...(@opts[:port_number] + @opts[:port_width])).to_a.shuffle.find do |i|
+                                        @server_socket = TCPServer.new(@hostname, i)
+                                      rescue Errno::EADDRINUSE
+                                        false
+                                      end)
+
     @platform = case RUBY_PLATFORM
-      when /mswin/, /mingw/, /bccwin/ then 'windows'
-      when /cygwin/ then 'windows-cygwin'
-      when /java/
-        require 'java' #:nodoc:
-        "#{java.lang.System.getProperty('os.name') =~ /[Ww]indows/ ? 'windows' : 'default'}-java"
-      else 'default'
-    end
-    @executable ||= ( @platform =~ /windows/ ) ? self.class.find_R_on_windows(@platform =~ /cygwin/) : 'R'
-    
+                when /mswin/, /mingw/, /bccwin/ then 'windows'
+                when /cygwin/ then 'windows-cygwin'
+                when /java/
+                  require 'java' # :nodoc:
+                  "#{java.lang.System.getProperty('os.name') =~ /[Ww]indows/ ? 'windows' : 'default'}-java"
+                else 'default'
+                end
+    @executable ||= @platform =~ /windows/ ? self.class.find_R_on_windows(@platform =~ /cygwin/) : 'R'
+
     @platform_options = []
-    if @interactive then
-      if @executable =~ /Rterm\.exe["']?$/ then
+    if @interactive
+      if @executable =~ /Rterm\.exe["']?$/
         @platform_options += ['--ess']
-      elsif @platform !~ /java$/ then
+      elsif @platform !~ /java$/
         # intentionally interactive off under java
         @platform_options += ['--no-readline', '--interactive']
       end
     end
-    
-    cmd = %Q<#{executable} #{@platform_options.join(' ')} --slave>
-    cmd = (@platform =~ /^windows(?!-cygwin)/) ? "#{cmd} 2>NUL" : "exec #{cmd} 2>/dev/null"
-    if @platform_options.include?('--interactive') then
+
+    cmd = %(#{executable} #{@platform_options.join(' ')} --slave)
+    cmd = @platform =~ /^windows(?!-cygwin)/ ? "#{cmd} 2>NUL" : "exec #{cmd} 2>/dev/null"
+    if @platform_options.include?('--interactive')
       require 'pty'
-      @reader, @writer, @r_pid = PTY::spawn("stty -echo && #{cmd}")
+      @reader, @writer, @r_pid = PTY.spawn("stty -echo && #{cmd}")
     else
-      @writer = @reader = IO::popen(cmd, 'w+')
+      @writer = @reader = IO.popen(cmd, 'w+')
       @r_pid = @reader.pid
     end
-    raise EngineClosed if (@reader.closed? || @writer.closed?)
-    
+    raise EngineClosed if @reader.closed? || @writer.closed?
+
     @writer.puts <<~EOF
       assign("#{RinRuby_Env}", new.env(), envir = globalenv())
     EOF
     @socket = nil
-    [:socket_io, :assign, :pull, :check].each{|fname| self.send("r_rinruby_#{fname}")}
+    %i[socket_io assign pull check].each { |fname| send("r_rinruby_#{fname}") }
     @writer.flush
-    
+
     @eval_count = 0
-    eval("0", false) # cleanup @reader
-    
-    # JRuby on *NIX runs forcefully in non-interactive, where stop() halts R 
+    eval('0', false, __FILE__, __LINE__) # cleanup @reader
+
+    # JRuby on *NIX runs forcefully in non-interactive, where stop() halts R
     # execution immediately in default.
-    # To continue when R error occurs, an error handler is added as a workaround  
+    # To continue when R error occurs, an error handler is added as a workaround
     # @see https://stat.ethz.ch/R-manual/R-devel/library/base/html/stop.html
-    eval("options(error=dump.frames)") if @platform =~ /^(?!windows-).*java$/
+    eval('options(error=dump.frames)') if @platform =~ /^(?!windows-).*java$/
   end
 
   # The quit method will properly close the bridge between Ruby and R, freeing up
@@ -197,10 +188,18 @@ class RinRuby
     begin
       @writer.puts "q(save='no')"
       @writer.close
-    rescue
+    rescue StandardError
     end
-    @reader.close rescue nil
-    @server_socket.close rescue nil
+    begin
+      @reader.close
+    rescue StandardError
+      nil
+    end
+    begin
+      @server_socket.close
+    rescue StandardError
+      nil
+    end
     true
   end
 
@@ -231,7 +230,7 @@ class RinRuby
   # <b>Parameters that can be passed to the eval method</b>
   #
   # @param string [String] The string parameter is the code which is to be passed
-  #                        to R, for example, string = "hist(gamma(1000,5,3))". 
+  #                        to R, for example, string = "hist(gamma(1000,5,3))".
   #                        The string can also span several lines of code by use
   #                         of a here document, as shown:
   #      R.eval <<EOF
@@ -240,23 +239,23 @@ class RinRuby
   #      EOF
   #
   # @param echo_override [] This argument allows one to set the echo behavior for
-  #                         this call only. The default for echo_override is nil, 
+  #                         this call only. The default for echo_override is nil,
   #                         which does not override the current echo behavior.
   # @param b [] echo block, which will be used as echo_override when echo_override equals to nil
 
   def eval(string, echo_override = nil, &b)
     echo_proc = case echo_override # echo on when echo_proc == nil
-    when Proc
-      echo_override
-    when nil
-      b || (@echo_enabled ? nil : proc{})
-    else
-      echo_override ? nil : proc{}
-    end
-    
-    if_parseable(string){|fun|
+                when Proc
+                  echo_override
+                when nil
+                  b || (@echo_enabled ? nil : proc {})
+                else
+                  echo_override ? nil : proc {}
+                end
+
+    if_parseable(string) do |fun|
       eval_engine("#{fun}()", &echo_proc)
-    }
+    end
   end
 
   # When sending code to Ruby using an interactive prompt, this method will change
@@ -264,7 +263,7 @@ class RinRuby
   # as if the R program was actually running. When the user is ready to return to
   # Ruby, then the command exit() will return the prompt to Ruby. This is the ideal
   # situation for the explorative programmer who needs to run several lines of code
-  # in R, and see the results after each command. This is also an easy way to 
+  # in R, and see the results after each command. This is also an easy way to
   # execute loops without the use of a here document. It should be noted that
   # the prompt command does not work in a script, just Ruby's interactive irb.
   #
@@ -273,29 +272,34 @@ class RinRuby
   # @param regular_prompt [] This defines the string used to denote the R prompt.
   # @param continue_prompt [] This is the string used to denote R's prompt for an incomplete statement (such as a multiple for loop).
 
-  def prompt(regular_prompt="> ", continue_prompt="+ ")
+  def prompt(regular_prompt = '> ', continue_prompt = '+ ')
     warn "'interactive' mode is off in this session " unless @interactive
-    
+
     @readline ||= begin # initialize @readline at the first invocation
       require 'readline'
-      proc{|prompt| Readline.readline(prompt, true)}
+      proc { |prompt| Readline.readline(prompt, true) }
     rescue LoadError
-      proc{|prompt|
+      proc { |prompt|
         print prompt
         $stdout.flush
-        gets.strip rescue nil
+        begin
+          gets.strip
+        rescue StandardError
+          nil
+        end
       }
     end
-    
+
     cmds = []
     while true
       cmds << @readline.call(cmds.empty? ? regular_prompt : continue_prompt)
-      if cmds[-1] then # the last "nil" input suspend current stack
+      if cmds[-1] # the last "nil" input suspend current stack
         break if /^\s*exit\s*\(\s*\)\s*$/ =~ cmds[0]
+
         begin
-          completed, eval_res = if_complete(cmds){|fun|
+          completed, eval_res = if_complete(cmds) do |fun|
             [true, eval_engine("#{fun}()")]
-          }
+          end
           next unless completed
           break unless eval_res
         rescue ParseError => e
@@ -331,9 +335,10 @@ class RinRuby
   def method_missing(symbol, *args)
     name = symbol.id2name
     if name =~ /(.*)=$/
-      raise ArgumentError, "You shouldn't assign nil" if args==[nil]
+      raise ArgumentError, "You shouldn't assign nil" if args == [nil]
+
       super if args.length != 1
-      assign($1,args[0])
+      assign(Regexp.last_match(1), args[0])
     else
       super if args.length != 0
       pull(name)
@@ -356,21 +361,21 @@ class RinRuby
   #      >> R.people = names
   #
   # Some care is needed when using the short-hand of the assign method since the
-  # label (i.e., people in this case) must be a valid method name in Ruby. 
+  # label (i.e., people in this case) must be a valid method name in Ruby.
   # For example, R.copy.of.names = names will not work, but R.copy_of_names = names
   # is permissible.
   #
-  # The assign method supports Ruby variables of type Fixnum (i.e., integer), 
+  # The assign method supports Ruby variables of type Fixnum (i.e., integer),
   # Bignum (i.e., integer), Float (i.e., double), String, and arrays of one of
   # those three fundamental types. Note that Fixnum or Bignum values that exceed
   # the capacity of R's integers are silently converted to doubles.  Data in other
   # formats must be coerced when copying to R.
   #
-  #<b>Parameters that can be passed to the assign method:</b>
+  # <b>Parameters that can be passed to the assign method:</b>
   #
-  #* name: The name of the variable desired in R.
+  # * name: The name of the variable desired in R.
   #
-  #* value: The value the R variable should have. The assign method supports Ruby variables of type Fixnum (i.e., integer), Bignum (i.e., integer), Float (i.e., double), String, and arrays of one of those three fundamental types.  Note that Fixnum or Bignum values that exceed the capacity of R's integers are silently converted to doubles.  Data in other formats must be coerced when copying to R.
+  # * value: The value the R variable should have. The assign method supports Ruby variables of type Fixnum (i.e., integer), Bignum (i.e., integer), Float (i.e., double), String, and arrays of one of those three fundamental types.  Note that Fixnum or Bignum values that exceed the capacity of R's integers are silently converted to doubles.  Data in other formats must be coerced when copying to R.
   #
   # The assign method is an alternative to the simplified method, with some additional flexibility. When using the simplified method, the parameters of name and value are automatically used, in other words:
   #
@@ -385,9 +390,9 @@ class RinRuby
   # When assigning an array containing differing types of variables, RinRuby will follow R's conversion conventions. An array that contains any Strings will result in a character vector in R. If the array does not contain any Strings, but it does contain a Float or a large integer (in absolute value), then the result will be a numeric vector of Doubles in R. If there are only integers that are sufficiently small (in absolute value), then the result will be a numeric vector of integers in R.
 
   def assign(name, value)
-    if_assignable(name){|fun|
+    if_assignable(name)  do |fun|
       assign_engine(fun, value)
-    }
+    end
   end
 
   # Data is copied from R to Ruby using the pull method or a short-hand equivalent.
@@ -411,7 +416,7 @@ class RinRuby
   #      0.781602719849499
   #
   # RinRuby also supports a convenient short-hand notation when the argument to
-  # pull is simply a previously-defined R object (whose name conforms to Ruby's 
+  # pull is simply a previously-defined R object (whose name conforms to Ruby's
   # requirements for method names). For example:
   #
   #      >> copy_of_x = R.x
@@ -436,7 +441,7 @@ class RinRuby
   # (i.e., integers or doubles) and character (i.e., strings). Data in other
   # formats must be coerced when copying to Ruby.
   #
-  #<b>Parameters that can be passed to the pull method:</b>
+  # <b>Parameters that can be passed to the pull method:</b>
   #
   # * string: The name of the variable that should be pulled from R. The pull method only supports R vectors which are numeric (i.e., integers or doubles) or character (i.e., strings). The R value of NA is pulled as nil into Ruby. Data in other formats must be coerced when copying to Ruby.
   #
@@ -451,10 +456,10 @@ class RinRuby
   #
   #      >> puts R.pull("test")
 
-  def pull(string, singletons=false)
-    if_parseable(string){|fun|
+  def pull(string, singletons = false)
+    if_parseable(string) do |fun|
       pull_engine("#{fun}()", singletons)
-    }
+    end
   end
 
   # The echo method controls whether the eval method displays output from R and,
@@ -467,20 +472,24 @@ class RinRuby
   #
   # * stderr: Setting stderr to true will force messages, warnings, and errors from R to be routed through stdout. Using stderr redirection is typically not needed, and is thus disabled by default. Echoing must be enabled when using stderr redirection.
 
-  def echo(enable=nil, stderr=nil)
-    next_enabled = (enable == nil) ? @echo_enabled : (enable ? true : false)
+  def echo(enable = nil, stderr = nil)
+    next_enabled = if enable.nil?
+                     @echo_enabled
+                   else
+                     (enable ? true : false)
+                   end
     next_stderr = case stderr
-    when nil
-      (next_enabled ? @echo_stderr : false) 
-    else
-      (stderr ? true : false)
+                  when nil
+                    (next_enabled ? @echo_stderr : false)
+                  else
+                    (stderr ? true : false)
+                  end
+
+    if (next_enabled == false) && (next_stderr == true) # prohibited combination
+      raise 'You can only redirect stderr if you are echoing is enabled.'
     end
-    
-    if (next_enabled == false) && (next_stderr == true) then # prohibited combination
-      raise "You can only redirect stderr if you are echoing is enabled."
-    end
-    
-    if @echo_stderr != next_stderr then
+
+    if @echo_stderr != next_stderr
       @writer.print(<<-__TEXT__)
         sink(#{'stdout(),' if next_stderr}type='message')
       __TEXT__
@@ -488,36 +497,36 @@ class RinRuby
     end
     [@echo_enabled = next_enabled, @echo_stderr = next_stderr]
   end
-  
+
   def echo_enabled=(enable)
     echo(enable).first
   end
 
   private
 
-  #:stopdoc:
+  # :stopdoc:
   RinRuby_Type_NotFound = -2
   RinRuby_Type_Unknown = -1
-  [
-    :Logical,
-    :Integer,
-    :Double,
-    :Character,
-    :Matrix,
-  ].each_with_index{|type, i|
-    Kernel.eval("RinRuby_Type_#{type} = i", binding)
-  }
+  %i[
+    Logical
+    Integer
+    Double
+    Character
+    Matrix
+  ].each_with_index do |type, i|
+    Kernel.eval("RinRuby_Type_#{type} = i", binding, __FILE__, __LINE__)
+  end
 
   RinRuby_Socket = "#{RinRuby_Env}$socket"
   RinRuby_Test_String = "#{RinRuby_Env}$test.string"
   RinRuby_Test_Result = "#{RinRuby_Env}$test.result"
-  
-  RinRuby_Eval_Flag = "RINRUBY.EVAL.FLAG"
-  
+
+  RinRuby_Eval_Flag = 'RINRUBY.EVAL.FLAG'
+
   RinRuby_NA_R_Integer  = -(1 << 31)
   RinRuby_Max_R_Integer =  (1 << 31) - 1
   RinRuby_Min_R_Integer = -(1 << 31) + 1
-  #:startdoc:
+  # :startdoc:
 
   def r_rinruby_socket_io
     @writer.print <<~EOF
@@ -544,7 +553,7 @@ class RinRuby
       }
     EOF
   end
-  
+
   def r_rinruby_check
     @writer.print <<~EOF
       #{RinRuby_Env}$parseable <- function(var) {
@@ -568,7 +577,7 @@ class RinRuby
         }else{
           endline <- data[max(data$line2) == data$line2, ]
           last.item <- endline[max(endline$col2) == endline$col2, ]
-          eval(substitute(c(line2, col2, token == "';'"), last.item)) 
+          eval(substitute(c(line2, col2, token == "';'"), last.item))#{' '}
         }
       }
       #{RinRuby_Env}$assignable <- function(var) {
@@ -581,6 +590,7 @@ class RinRuby
       }
     EOF
   end
+
   # Create function on ruby to get values
   def r_rinruby_assign
     @writer.print <<~EOF
@@ -658,18 +668,21 @@ class RinRuby
       }
     EOF
   end
-  
+
   def socket_session(&b)
     socket = @socket
-    # TODO check still available connection?
-    unless socket then
-      t = Thread::new{socket = @server_socket.accept}
+    # TODO: check still available connection?
+    unless socket
+      t = Thread.new { socket = @server_socket.accept }
       @writer.print <<~EOF
         #{RinRuby_Socket} <- socketConnection( \
             "#{@hostname}", #{@port_number}, blocking=TRUE, open="rb")
       EOF
-      @writer.puts(
-          "on.exit(close(#{RinRuby_Socket}, add = T))") if @opts[:persistent]
+      if @opts[:persistent]
+        @writer.puts(
+          "on.exit(close(#{RinRuby_Socket}, add = T))"
+        )
+      end
       @writer.flush
       t.join
     end
@@ -677,7 +690,7 @@ class RinRuby
     res = nil
     begin
       res = b.call(socket)
-    rescue
+    rescue StandardError
       keep_socket = false
       raise $!
     ensure
