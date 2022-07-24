@@ -1,11 +1,23 @@
 #=RinRuby: Accessing the R[http://www.r-project.org] interpreter from pure Ruby
 #
-#RinRuby is a Ruby library that integrates the R interpreter in Ruby, making R's statistical routines and graphics available within Ruby.  The library consists of a single Ruby script that is simple to install and does not require any special compilation or installation of R.  Since the library is 100% pure Ruby, it works on a variety of operating systems, Ruby implementations, and versions of R.  RinRuby's methods are simple, making for readable code.  The {website [rinruby.ddahl.org]}[http://rinruby.ddahl.org] describes RinRuby usage, provides comprehensive documentation, gives several examples, and discusses RinRuby's implementation.
+# RinRuby is a Ruby library that integrates the R interpreter in Ruby, making R's
+# statistical routines and graphics available within Ruby.  The library consists
+# of a single Ruby script that is simple to install and does not require any
+# special compilation or installation of R.  Since the library is 100% pure Ruby,
+# it works on a variety of operating systems, Ruby implementations, and versions
+# of R.  RinRuby's methods are simple, making for readable code.  
+# The {website [rinruby.ddahl.org]}[http://rinruby.ddahl.org] describes RinRuby
+# usage, provides comprehensive documentation, gives several examples, and discusses
+# RinRuby's implementation.
 #
-#Below is a simple example of RinRuby usage for simple linear regression. The simulation parameters are defined in Ruby, computations are performed in R, and Ruby reports the results. In a more elaborate application, the simulation parameter might come from input from a graphical user interface, the statistical analysis might be more involved, and the results might be an HTML page or PDF report.
+# Below is a simple example of RinRuby usage for simple linear regression. 
+# The simulation parameters are defined in Ruby, computations are performed in R,
+# and Ruby reports the results. In a more elaborate application, the simulation
+# parameter might come from input from a graphical user interface, the statistical
+# analysis might be more involved, and the results might be an HTML page or PDF
+# report.
 #
-#<b>Code</b>:
-#
+# @example
 #      require "rinruby"
 #      n = 10
 #      beta_0 = 1
@@ -27,20 +39,18 @@
 #        puts "There is insufficient evidence to conclude that x and y are related."
 #      end
 #
-#<b>Output</b>:
-#
+# Output:
 #      E(y|x) ~= 1.264 + 0.273 * x
 #      Reject the null hypothesis and conclude that x and y are related.
 #
-#Coded by:: David B. Dahl
-#Documented by:: David B. Dahl & Scott Crawford
-#Maintained by:: Claudio Bustos
-#Copyright:: 2005-2009
-#Web page:: http://rinruby.ddahl.org
-#E-mail::   mailto:rinruby@ddahl.org
-#License::  GNU Lesser General Public License (LGPL), version 3 or later
+# Coded by:: David B. Dahl
+# Documented by:: David B. Dahl & Scott Crawford
+# Maintained by:: Claudio Bustos
+# Copyright:: 2005-2009
+# Web page:: http://rinruby.ddahl.org
+# E-mail::   mailto:rinruby@ddahl.org
+# License::  GNU Lesser General Public License (LGPL), version 3 or later
 #
-#--
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -53,13 +63,12 @@
 #
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
-#++
 #
 #
-#The files "java" and "readline" are used when available to add functionality.
-require 'matrix'
+# The files "java" and "readline" are used when available to add functionality.
 
-require File.expand_path(File.dirname(__FILE__) + '/rinruby/version.rb')
+require 'matrix'
+require_relative 'rinruby/version'
 
 class RinRuby
 
@@ -81,31 +90,34 @@ class RinRuby
   attr_reader :port_width
   attr_reader :hostname
       
-#RinRuby is invoked within a Ruby script (or the interactive "irb" prompt denoted >>) using:
-#
-#      >> require "rinruby"
-#
-#The previous statement reads the definition of the RinRuby class into the current Ruby interpreter and creates an instance of the RinRuby class named R. There is a second method for starting an instance of R which allows the user to use any name for the instance, in this case myr:
-#
-#      >> require "rinruby"
-#      >> myr = RinRuby.new
-#      >> myr.eval "rnorm(1)"
-#
-#Any number of independent instances of R can be created in this way.
-#
-#<b>Parameters that can be passed to the new method using a Hash:</b>
-#
-#* :echo: By setting the echo to false, output from R is suppressed, although warnings are still printed. This option can be changed later by using the echo method. The default is true.
-#* :interactive: When interactive is false, R is run in non-interactive mode, resulting in plots without an explicit device being written to Rplots.pdf. Otherwise (i.e., interactive is true), plots are shown on the screen. The default is true.
-#* :executable: The path of the R executable (which is "R" in Linux and Mac OS X, or "Rterm.exe" in Windows) can be set with the executable argument. The default is nil which makes RinRuby use the registry keys to find the path (on Windows) or use the path defined by $PATH (on Linux and Mac OS X).
-#* :port_number: This is the smallest port number on the local host that could be used to pass data between Ruby and R. The actual port number used depends on port_width.
-#* :port_width: RinRuby will randomly select a uniform number between port_number and port_number + port_width - 1 (inclusive) to pass data between Ruby and R. If the randomly selected port is not available, RinRuby will continue selecting random ports until it finds one that is available. By setting port_width to 1, RinRuby will wait until port_number is available. The default port_width is 1000.
-#
-#It may be desirable to change the parameters to the instance of R, but still call it by the name of R. In that case the old instance of R which was created with the 'require "rinruby"' statement should be closed first using the quit method which is explained below. Unless the previous instance is killed, it will continue to use system resources until exiting Ruby. The following shows an example by changing the parameter echo:
-#
-#      >> require "rinruby"
-#      >> R.quit
-#      >> R = RinRuby.new(false)
+  # RinRuby is invoked within a Ruby script
+  # (or the interactive "irb" prompt denoted >>) using:
+  #
+  #      >> require "rinruby"
+  #
+  # The previous statement reads the definition of the RinRuby class into the
+  # current Ruby interpreter and creates an instance of the RinRuby class named R.
+  # There is a second method for starting an instance of R which allows the user
+  # to use any name for the instance, in this case myr:
+  #
+  #      >> require "rinruby"
+  #      >> myr = RinRuby.new
+  #      >> myr.eval "rnorm(1)"
+  #
+  # Any number of independent instances of R can be created in this way.
+  #
+  # @param echo        [] By setting the echo to false, output from R is suppressed, although warnings are still printed. This option can be changed later by using the echo method. The default is true.
+  # @param interactive [] When interactive is false, R is run in non-interactive mode, resulting in plots without an explicit device being written to Rplots.pdf. Otherwise (i.e., interactive is true), plots are shown on the screen. The default is true.
+  # @param executable  [] The path of the R executable (which is "R" in Linux and Mac OS X, or "Rterm.exe" in Windows) can be set with the executable argument. The default is nil which makes RinRuby use the registry keys to find the path (on Windows) or use the path defined by $PATH (on Linux and Mac OS X).
+  # @param port_number [] This is the smallest port number on the local host that could be used to pass data between Ruby and R. The actual port number used depends on port_width.
+  # @param port_width  [] RinRuby will randomly select a uniform number between port_number and port_number + port_width - 1 (inclusive) to pass data between Ruby and R. If the randomly selected port is not available, RinRuby will continue selecting random ports until it finds one that is available. By setting port_width to 1, RinRuby will wait until port_number is available. The default port_width is 1000.
+  #
+  # It may be desirable to change the parameters to the instance of R, but still call it by the name of R. In that case the old instance of R which was created with the 'require "rinruby"' statement should be closed first using the quit method which is explained below. Unless the previous instance is killed, it will continue to use system resources until exiting Ruby. The following shows an example by changing the parameter echo:
+  #
+  #      >> require "rinruby"
+  #      >> R.quit
+  #      >> R = RinRuby.new(false)
+
   def initialize(*args)
     @opts = {:echo=>true, :interactive=>true, :executable=>nil, 
         :port_number=>38442, :port_width=>1000, :hostname=>'127.0.0.1', :persistent => true}        
@@ -171,13 +183,15 @@ class RinRuby
     @eval_count = 0
     eval("0", false) # cleanup @reader
     
-    # JRuby on *NIX runs forcefully in non-interactive, where stop() halts R execution immediately in default.
+    # JRuby on *NIX runs forcefully in non-interactive, where stop() halts R 
+    # execution immediately in default.
     # To continue when R error occurs, an error handler is added as a workaround  
     # @see https://stat.ethz.ch/R-manual/R-devel/library/base/html/stop.html
     eval("options(error=dump.frames)") if @platform =~ /^(?!windows-).*java$/
   end
 
-#The quit method will properly close the bridge between Ruby and R, freeing up system resources. This method does not need to be run when a Ruby script ends.
+  # The quit method will properly close the bridge between Ruby and R, freeing up
+  # system resources. This method does not need to be run when a Ruby script ends.
 
   def quit
     begin
@@ -190,37 +204,45 @@ class RinRuby
     true
   end
 
-#The eval instance method passes the R commands contained in the supplied string and displays any resulting plots or prints the output. For example:
-#
-#      >>  sample_size = 10
-#      >>  R.eval "x <- rnorm(#{sample_size})"
-#      >>  R.eval "summary(x)"
-#      >>  R.eval "sd(x)"
-#
-#produces the following:
-#
-#         Min. 1st Qu.        Median      Mean 3rd Qu.         Max.
-#      -1.88900 -0.84930 -0.45220 -0.49290 -0.06069          0.78160
-#      [1] 0.7327981
-#
-#This example used a string substitution to make the argument to first eval method equivalent to x <- rnorm(10). This example used three invocations of the eval method, but a single invoke is possible using a here document:
-#
-#      >> R.eval <<EOF
-#              x <- rnorm(#{sample_size})
-#              summary(x)
-#              sd(x)
-#         EOF
-#
-#<b>Parameters that can be passed to the eval method</b>
-#
-#* string: The string parameter is the code which is to be passed to R, for example, string = "hist(gamma(1000,5,3))". The string can also span several lines of code by use of a here document, as shown:
-#      R.eval <<EOF
-#         x<-rgamma(1000,5,3)
-#         hist(x)
-#      EOF
-#
-#* echo_override: This argument allows one to set the echo behavior for this call only. The default for echo_override is nil, which does not override the current echo behavior.
-#* b: echo block, which will be used as echo_override when echo_override equals to nil
+  # The eval instance method passes the R commands contained in the supplied
+  # string and displays any resulting plots or prints the output. For example:
+  #
+  #      >>  sample_size = 10
+  #      >>  R.eval "x <- rnorm(#{sample_size})"
+  #      >>  R.eval "summary(x)"
+  #      >>  R.eval "sd(x)"
+  #
+  # produces the following:
+  #
+  #         Min. 1st Qu.        Median      Mean 3rd Qu.         Max.
+  #      -1.88900 -0.84930 -0.45220 -0.49290 -0.06069          0.78160
+  #      [1] 0.7327981
+  #
+  # This example used a string substitution to make the argument to first eval
+  # method equivalent to x <- rnorm(10). This example used three invocations of
+  # the eval method, but a single invoke is possible using a here document:
+  #
+  #      >> R.eval <<EOF
+  #              x <- rnorm(#{sample_size})
+  #              summary(x)
+  #              sd(x)
+  #         EOF
+  #
+  # <b>Parameters that can be passed to the eval method</b>
+  #
+  # @param string [String] The string parameter is the code which is to be passed
+  #                        to R, for example, string = "hist(gamma(1000,5,3))". 
+  #                        The string can also span several lines of code by use
+  #                         of a here document, as shown:
+  #      R.eval <<EOF
+  #         x<-rgamma(1000,5,3)
+  #         hist(x)
+  #      EOF
+  #
+  # @param echo_override [] This argument allows one to set the echo behavior for
+  #                         this call only. The default for echo_override is nil, 
+  #                         which does not override the current echo behavior.
+  # @param b [] echo block, which will be used as echo_override when echo_override equals to nil
 
   def eval(string, echo_override = nil, &b)
     echo_proc = case echo_override # echo on when echo_proc == nil
@@ -237,13 +259,19 @@ class RinRuby
     }
   end
 
-#When sending code to Ruby using an interactive prompt, this method will change the prompt to an R prompt. From the R prompt commands can be sent to R exactly as if the R program was actually running. When the user is ready to return to Ruby, then the command exit() will return the prompt to Ruby. This is the ideal situation for the explorative programmer who needs to run several lines of code in R, and see the results after each command. This is also an easy way to execute loops without the use of a here document. It should be noted that the prompt command does not work in a script, just Ruby's interactive irb.
-#
-#<b>Parameters that can be passed to the prompt method:</b>
-#
-#* regular_prompt: This defines the string used to denote the R prompt.
-#
-#* continue_prompt: This is the string used to denote R's prompt for an incomplete statement (such as a multiple for loop).
+  # When sending code to Ruby using an interactive prompt, this method will change
+  # the prompt to an R prompt. From the R prompt commands can be sent to R exactly
+  # as if the R program was actually running. When the user is ready to return to
+  # Ruby, then the command exit() will return the prompt to Ruby. This is the ideal
+  # situation for the explorative programmer who needs to run several lines of code
+  # in R, and see the results after each command. This is also an easy way to 
+  # execute loops without the use of a here document. It should be noted that
+  # the prompt command does not work in a script, just Ruby's interactive irb.
+  #
+  # <b>Parameters that can be passed to the prompt method:</b>
+  #
+  # @param regular_prompt [] This defines the string used to denote the R prompt.
+  # @param continue_prompt [] This is the string used to denote R's prompt for an incomplete statement (such as a multiple for loop).
 
   def prompt(regular_prompt="> ", continue_prompt="+ ")
     warn "'interactive' mode is off in this session " unless @interactive
@@ -279,23 +307,26 @@ class RinRuby
     true
   end
 
-#If a method is called which is not defined, then it is assumed that the user is attempting to either pull or assign a variable to R.  This allows for the short-hand equivalents to the pull and assign methods.  For example:
-#
-#      >> R.x = 2
-#
-#is the same as:
-#
-#      >> R.assign("x",2)
-#
-#Also:
-#
-#      >> n = R.x
-#
-#is the same as:
-#
-#      >> n = R.pull("x")
-#
-#The parameters passed to method_missing are those used for the pull or assign depending on the context.
+  # If a method is called which is not defined, then it is assumed that the user
+  # is attempting to either pull or assign a variable to R.  This allows for the
+  # short-hand equivalents to the pull and assign methods.  For example:
+  #
+  #      >> R.x = 2
+  #
+  # is the same as:
+  #
+  #      >> R.assign("x",2)
+  #
+  # Also:
+  #
+  #      >> n = R.x
+  #
+  # is the same as:
+  #
+  #      >> n = R.pull("x")
+  #
+  # The parameters passed to method_missing are those used for the pull or assign
+  # depending on the context.
 
   def method_missing(symbol, *args)
     name = symbol.id2name
@@ -309,41 +340,49 @@ class RinRuby
     end
   end
 
-#Data is copied from Ruby to R using the assign method or a short-hand equivalent. For example:
-#
-#      >> names = ["Lisa","Teasha","Aaron","Thomas"]
-#      >> R.assign "people", names
-#      >> R.eval "sort(people)"
-#
-#produces the following :
-#
-#      [1] "Aaron"     "Lisa"     "Teasha" "Thomas"
-#
-#The short-hand equivalent to the assign method is simply:
-#
-#      >> R.people = names
-#
-#Some care is needed when using the short-hand of the assign method since the label (i.e., people in this case) must be a valid method name in Ruby. For example, R.copy.of.names = names will not work, but R.copy_of_names = names is permissible.
-#
-#The assign method supports Ruby variables of type Fixnum (i.e., integer), Bignum (i.e., integer), Float (i.e., double), String, and arrays of one of those three fundamental types. Note that Fixnum or Bignum values that exceed the capacity of R's integers are silently converted to doubles.  Data in other formats must be coerced when copying to R.
-#
-#<b>Parameters that can be passed to the assign method:</b>
-#
-#* name: The name of the variable desired in R.
-#
-#* value: The value the R variable should have. The assign method supports Ruby variables of type Fixnum (i.e., integer), Bignum (i.e., integer), Float (i.e., double), String, and arrays of one of those three fundamental types.  Note that Fixnum or Bignum values that exceed the capacity of R's integers are silently converted to doubles.  Data in other formats must be coerced when copying to R.
-#
-#The assign method is an alternative to the simplified method, with some additional flexibility. When using the simplified method, the parameters of name and value are automatically used, in other words:
-#
-#      >> R.test = 144
-#
-#is the same as:
-#
-#      >> R.assign("test",144)
-#
-#Of course it would be confusing to use the shorthand notation to assign a variable named eval, echo, or any other already defined function. RinRuby would assume you were calling the function, rather than trying to assign a variable.
-#
-#When assigning an array containing differing types of variables, RinRuby will follow R's conversion conventions. An array that contains any Strings will result in a character vector in R. If the array does not contain any Strings, but it does contain a Float or a large integer (in absolute value), then the result will be a numeric vector of Doubles in R. If there are only integers that are sufficiently small (in absolute value), then the result will be a numeric vector of integers in R.
+  # Data is copied from Ruby to R using the assign method or a short-hand equivalent.
+  # For example:
+  #
+  #      >> names = ["Lisa","Teasha","Aaron","Thomas"]
+  #      >> R.assign "people", names
+  #      >> R.eval "sort(people)"
+  #
+  # produces the following :
+  #
+  #      [1] "Aaron"     "Lisa"     "Teasha" "Thomas"
+  #
+  # The short-hand equivalent to the assign method is simply:
+  #
+  #      >> R.people = names
+  #
+  # Some care is needed when using the short-hand of the assign method since the
+  # label (i.e., people in this case) must be a valid method name in Ruby. 
+  # For example, R.copy.of.names = names will not work, but R.copy_of_names = names
+  # is permissible.
+  #
+  # The assign method supports Ruby variables of type Fixnum (i.e., integer), 
+  # Bignum (i.e., integer), Float (i.e., double), String, and arrays of one of
+  # those three fundamental types. Note that Fixnum or Bignum values that exceed
+  # the capacity of R's integers are silently converted to doubles.  Data in other
+  # formats must be coerced when copying to R.
+  #
+  #<b>Parameters that can be passed to the assign method:</b>
+  #
+  #* name: The name of the variable desired in R.
+  #
+  #* value: The value the R variable should have. The assign method supports Ruby variables of type Fixnum (i.e., integer), Bignum (i.e., integer), Float (i.e., double), String, and arrays of one of those three fundamental types.  Note that Fixnum or Bignum values that exceed the capacity of R's integers are silently converted to doubles.  Data in other formats must be coerced when copying to R.
+  #
+  # The assign method is an alternative to the simplified method, with some additional flexibility. When using the simplified method, the parameters of name and value are automatically used, in other words:
+  #
+  #      >> R.test = 144
+  #
+  # is the same as:
+  #
+  #      >> R.assign("test",144)
+  #
+  # Of course it would be confusing to use the shorthand notation to assign a variable named eval, echo, or any other already defined function. RinRuby would assume you were calling the function, rather than trying to assign a variable.
+  #
+  # When assigning an array containing differing types of variables, RinRuby will follow R's conversion conventions. An array that contains any Strings will result in a character vector in R. If the array does not contain any Strings, but it does contain a Float or a large integer (in absolute value), then the result will be a numeric vector of Doubles in R. If there are only integers that are sufficiently small (in absolute value), then the result will be a numeric vector of integers in R.
 
   def assign(name, value)
     if_assignable(name){|fun|
@@ -351,58 +390,66 @@ class RinRuby
     }
   end
 
-#Data is copied from R to Ruby using the pull method or a short-hand equivalent. The R object x defined with an eval method can be copied to Ruby object copy_of_x as follows:
-#
-#      >> R.eval "x <- rnorm(10)"
-#      >> copy_of_x = R.pull "x"
-#      >> puts copy_of_x
-#
-#which produces the following :
-#
-#      -0.376404489256671
-#      -1.0759798269397
-#      -0.494240140140996
-#      0.131171385795721
-#      -0.878328334369391
-#      -0.762290423047929
-#      -0.410227216105828
-#      0.0445512804225151
-#      -1.88887454545995
-#      0.781602719849499
-#
-#RinRuby also supports a convenient short-hand notation when the argument to pull is simply a previously-defined R object (whose name conforms to Ruby's requirements for method names). For example:
-#
-#      >> copy_of_x = R.x
-#
-#The explicit assign method, however, can take an arbitrary R statement. For example:
-#
-#      >> summary_of_x = R.pull "as.numeric(summary(x))"
-#      >> puts summary_of_x
-#
-#produces the following:
-#
-#      -1.889
-#      -0.8493
-#      -0.4522
-#      -0.4929
-#      -0.06069
-#      0.7816
-#
-#Notice the use above of the as.numeric function in R. This is necessary since the pull method only supports R vectors which are numeric (i.e., integers or doubles) and character (i.e., strings). Data in other formats must be coerced when copying to Ruby.
-#
-#<b>Parameters that can be passed to the pull method:</b>
-#
-#* string: The name of the variable that should be pulled from R. The pull method only supports R vectors which are numeric (i.e., integers or doubles) or character (i.e., strings). The R value of NA is pulled as nil into Ruby. Data in other formats must be coerced when copying to Ruby.
-#
-#* singletons: R represents a single number as a vector of length one, but in Ruby it is often more convenient to use a number rather than an array of length one. Setting singleton=false will cause the pull method to shed the array, while singletons=true will return the number of string within an array.  The default is false.
-#
-#The pull method is an alternative to the simplified form where the parameters are automatically used.  For example:
-#
-#      >> puts R.test
-#
-#is the same as:
-#
-#      >> puts R.pull("test")
+  # Data is copied from R to Ruby using the pull method or a short-hand equivalent.
+  # The R object x defined with an eval method can be copied to Ruby object copy_of_x as follows:
+  #
+  #      >> R.eval "x <- rnorm(10)"
+  #      >> copy_of_x = R.pull "x"
+  #      >> puts copy_of_x
+  #
+  # which produces the following :
+  #
+  #      -0.376404489256671
+  #      -1.0759798269397
+  #      -0.494240140140996
+  #      0.131171385795721
+  #      -0.878328334369391
+  #      -0.762290423047929
+  #      -0.410227216105828
+  #      0.0445512804225151
+  #      -1.88887454545995
+  #      0.781602719849499
+  #
+  # RinRuby also supports a convenient short-hand notation when the argument to
+  # pull is simply a previously-defined R object (whose name conforms to Ruby's 
+  # requirements for method names). For example:
+  #
+  #      >> copy_of_x = R.x
+  #
+  # The explicit assign method, however, can take an arbitrary R statement.
+  # For example:
+  #
+  #      >> summary_of_x = R.pull "as.numeric(summary(x))"
+  #      >> puts summary_of_x
+  #
+  # produces the following:
+  #
+  #      -1.889
+  #      -0.8493
+  #      -0.4522
+  #      -0.4929
+  #      -0.06069
+  #      0.7816
+  #
+  # Notice the use above of the as.numeric function in R. This is necessary
+  # since the pull method only supports R vectors which are numeric
+  # (i.e., integers or doubles) and character (i.e., strings). Data in other
+  # formats must be coerced when copying to Ruby.
+  #
+  #<b>Parameters that can be passed to the pull method:</b>
+  #
+  # * string: The name of the variable that should be pulled from R. The pull method only supports R vectors which are numeric (i.e., integers or doubles) or character (i.e., strings). The R value of NA is pulled as nil into Ruby. Data in other formats must be coerced when copying to Ruby.
+  #
+  # * singletons: R represents a single number as a vector of length one, but in Ruby it is often more convenient to use a number rather than an array of length one. Setting singleton=false will cause the pull method to shed the array, while singletons=true will return the number of string within an array.  The default is false.
+  #
+  # The pull method is an alternative to the simplified form where the parameters
+  # are automatically used.  For example:
+  #
+  #      >> puts R.test
+  #
+  # is the same as:
+  #
+  #      >> puts R.pull("test")
 
   def pull(string, singletons=false)
     if_parseable(string){|fun|
@@ -410,13 +457,15 @@ class RinRuby
     }
   end
 
-#The echo method controls whether the eval method displays output from R and, if echo is enabled, whether messages, warnings, and errors from stderr are also displayed.
-#
-#<b>Parameters that can be passed to the eval method</b>
-#
-#* enable: Setting enable to false will turn all output off until the echo command is used again with enable equal to true. The default is nil, which will return the current setting.
-#
-#* stderr: Setting stderr to true will force messages, warnings, and errors from R to be routed through stdout. Using stderr redirection is typically not needed, and is thus disabled by default. Echoing must be enabled when using stderr redirection.
+  # The echo method controls whether the eval method displays output from R and,
+  # if echo is enabled, whether messages, warnings, and errors from stderr are
+  # also displayed.
+  #
+  # <b>Parameters that can be passed to the eval method</b>
+  #
+  # * enable: Setting enable to false will turn all output off until the echo command is used again with enable equal to true. The default is nil, which will return the current setting.
+  #
+  # * stderr: Setting stderr to true will force messages, warnings, and errors from R to be routed through stdout. Using stderr redirection is typically not needed, and is thus disabled by default. Echoing must be enabled when using stderr redirection.
 
   def echo(enable=nil, stderr=nil)
     next_enabled = (enable == nil) ? @echo_enabled : (enable ? true : false)
